@@ -19,3 +19,9 @@ The analysis is performed using the activity ditribution (pmol/min/Mio cells) fr
    * The mean and the SD in logarithmic domain
    * The median, mean, SD, best lambda, the p value for the Shapiro normality assessment for male and female, the Barlett's test and the p value from the ANOVA test after the Box-Cox transformation.
   
+# Examples cases of the system parameters impact
+The code report the simulations reported in the tutorial in order to explore the impact of the:
+  * Surface area and volume of the apical side in the transwell of a Gut-Liver OoC.
+  * Volume samling and evaporation.
+
+In the codes are available the input data and the output reported as figures in the MS.
