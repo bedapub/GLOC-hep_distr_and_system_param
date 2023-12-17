@@ -1,4 +1,5 @@
 
+
 # Libraries necessary to run the project
 library(RxODE)
 library(reshape2)
@@ -179,169 +180,11 @@ p33=plot(ggplot(sim_samples,aes(time/60,A4.S)) + geom_line(aes(color = as.factor
 grid.arrange(p11,p22,p33,nrow = 1)
 
 
-##################                                              ####################
-##################  Flow rate between basol side and liver MPS  ####################
-##################                                              ####################
-ini.Conc=10
+##################                                 ####################
+##################  Volume modification overtime  ####################
+##################                                 ####################
 
-gut.liver.pop <-  RxODE({         # General model
-  # Volume of the cells
-  V5 = 1.7    # Typical enterocyte volume of 1 Mio of cells
-  V6 = 3.9    # Typical enterocyte volume of 1 Mio of cells
-  
-  Q =Med_Q
-  ### Concentration/amount relationship for the substrate
-  C2.S = A2.S / V2               # Substrate concentration in the AP
-  C3.S = A3.S / V3               # Substrate concentration in the BS
-  C4.S = A4.S  / V4               # Substrate concentration in the LMPS
-  C5.S = A5.S  / (N3 * V5)       # Substrate concentration in the ent.
-  C6.S = A6.S  / (N4 * V6)       # Substrate concentration in the hep.
-  
-  
-  CL23 = SA23 * convfactor*Papp*exp(eta.Papp)
-  
-  
-  
-  # Substrate
-  d/dt(A2.S) = - CL23 * NPERM * (C2.S * fum2 - C5.S) # AP. passive diffusion ent.
-  d/dt(A3.S) = CL23 * NPERM * (C5.S- C3.S * fum)     # BS. passive diffusion
-  + Q  * C4.S 
-  - Q  * C3.S                 # Circulation flow out (BS -> LIVER MPS)     
-  d/dt(A4.S) =  Q * C3.S                      # Circulation flow in (MC -> LMPS)
-  - Q * C4.S                       # Circulation flow out (LMPS -> MC)        
-  - CL56S * (C4.S * fum - C6.S)            # Passive diffusion hep.
-  d/dt(A5.S) = CL23 * NPERM * (C2.S * fum2 - C5.S)   # ENT. passive diffusion .ent apical side
-  - CL23 * NPERM *(C5.S - C3.S * fum)     # passive diffusion .ent basolateral side
-  - CL3tot * N3 * C5.S                     # Intestinal metabolism
-  d/dt(A6.S) = CL56S * (C4.S * fum - C6.S)            # HEP. passive diffusion hep.
-  - CL4tot * N4 * C6.S                     # Metabolism in the liver cells
-  
-  
-  C2ObsS = C2.S *exp(CEps.C2.S) 
-  C3ObsS = C3.S *exp(CEps.C3.S) 
-  C4ObsS = C3.S *exp(CEps.C4.S) 
-  
-})
-
-Q_i= c(10,30,50)
-#Q_i= c(1000,5000,9000)
-
-sim = data.frame()
-for (i in 1:length(Q_i)){
-  
-  #Parameters
-  param=c( V2=325  ,V3=1506 , V4 =1394, fum =  1,fum2 = 1, fumM =  1,fum2M = 1, NPERM=2,Papp=800,CL3tot=0, CL4tot=120,CL56S=10000000, SA23=0.33,N3=0.5,N4=0.5,convfactor=0.006, Med_Q=Q_i[i]  )
-  
-  #Event table                           
-  qd <- et(seq(0, 2880, by = 1))
-  
-  #Ini. cond                          
-  # Initialization 
-  initialization <- c(A2.S = ini.Conc* as.numeric(param["V2"]), A3.S = 0)
-  
-  #
-  omega.matrix= lotri({c(eta.Papp ~  0.00001) })
-  
-  sigma.matrix <- lotri(CEps.C2.S ~0.15^2, CEps.C3.S ~ 0.15^2, CEps.C4.S ~ 0.15^2)
-  ### Sensitivity analysis ####
-  set.seed(120)
-  sim_i <- rxSolve(object=gut.liver.pop, params =param,events =qd,inits=initialization, omega=omega.matrix, sigma=sigma.matrix, sub=1)
-  
-  sim_i = as.data.frame(sim_i)
-  
-
-  sim= rbind(sim, sim_i)
-}
-sim1=sim
-sim1$Qbl=30
-
-#sim_samples = subset(sim, time %in% c(0,30,60,120,240,1440,2880,4320))
-sim_samples=sim
-
-p1=plot(ggplot(sim_samples,aes(time/60,C2.S)) +  geom_line(aes(color = as.factor(Q))) +ylab("uM") + xlab("Time (h)") +ggtitle("Apical side") + theme(legend.position="bottom")+  theme(legend.key.size = unit(0.2, "cm")) +theme(legend.title=element_blank())+
-          theme_bw()+ scale_y_continuous(limits = c(0, 10.52))+labs(color='Q (uL/min)')+ theme(legend.position=c(0.75, 0.3))) 
-
-p2=plot(ggplot(sim_samples,aes(time/60,C3.S)) + geom_line(aes(color = as.factor(Q))) +ylab("uM") + xlab("Time (h)") +ggtitle("Basolateral  side")+ theme(legend.position="bottom")+  theme(legend.key.size = unit(0.2, "cm")) +theme(legend.title=element_blank())+
-          theme_bw()+labs(color='Surface Area (cm2)')+theme(legend.position = "none")) 
-
-p3=plot(ggplot(sim_samples,aes(time/60,C4.S)) + geom_line(aes(color = as.factor(Q))) +ylab("uM") + xlab("Time (h)") +ggtitle("Liver  MPS")+ theme(legend.position="bottom")+  theme(legend.key.size = unit(0.2, "cm")) +theme(legend.title=element_blank())+
-          theme_bw()+labs(color='Surface Area (cm2)')+theme(legend.position = "none")) 
-
-grid.arrange(p1,p2,p3,nrow = 1)
-
-
-######### Second set
-Q_i=c(96,120,144)
-#Q_i= c(1000,5000,9000)
-
-sim = data.frame()
-for (i in 1:length(Q_i)){
-  
-  #Parameters
-   param=c( V2=325  ,V3=1594 , V4 =1394, fum =  1,fum2 = 1, fumM =  1,fum2M = 1, NPERM=2,Papp=500,CL3tot=0, CL4tot=120,CL56S=10000000, SA23=0.33,N3=0.5,N4=0.5,convfactor=0.006, Med_Q=Q_i[i]  )
-  
-  #Event table                           
-  qd <- et(seq(0, 2880, by = 1))
-  
-  #Ini. cond                          
-  # Initialization 
-  initialization <- c(A2.S = ini.Conc* as.numeric(param["V2"]), A3.S = 0)
-  
-  #
-  omega.matrix= lotri({c(eta.Papp ~  0.00001) })
-  
-  sigma.matrix <- lotri(CEps.C2.S ~0.15^2, CEps.C3.S ~ 0.15^2, CEps.C4.S ~ 0.15^2)
-  ### Sensitivity analysis ####
-  set.seed(120)
-  sim_i <- rxSolve(object=gut.liver.pop, params =param,events =qd,inits=initialization, omega=omega.matrix, sigma=sigma.matrix, sub=1)
-  
-  sim_i = as.data.frame(sim_i)
-  
-  
-  sim= rbind(sim, sim_i)
-}
-
-
-
-#sim_samples = subset(sim, time %in% c(0,30,60,120,240,1440,2880,4320))
-#sim_samples = subset(sim, time %in% c(0,30,60,120,240,1440,2880,4320))
-sim_samples=sim
-
-p1=plot(ggplot(sim_samples,aes(time/60,C2.S)) +  geom_line(aes(color = as.factor(Q))) +ylab("uM") + xlab("Time (h)") +ggtitle("Apical side") + theme(legend.position="bottom")+  theme(legend.key.size = unit(0.2, "cm")) +theme(legend.title=element_blank())+
-          theme_bw()+ scale_y_continuous(limits = c(0, 10.52))+labs(color='Q (uL/min)')+ theme(legend.position=c(0.75, 0.3))) 
-
-p2=plot(ggplot(sim_samples,aes(time/60,C3.S)) + geom_line(aes(color = as.factor(Q))) +ylab("uM") + xlab("Time (h)") +ggtitle("Basolateral  side")+ theme(legend.position="bottom")+  theme(legend.key.size = unit(0.2, "cm")) +theme(legend.title=element_blank())+
-          theme_bw()+labs(color='Surface Area (cm2)')+theme(legend.position = "none")) 
-
-p3=plot(ggplot(sim_samples,aes(time/60,C4.S)) + geom_line(aes(color = as.factor(Q))) +ylab("uM") + xlab("Time (h)") +ggtitle("Liver  MPS")+ theme(legend.position="bottom")+  theme(legend.key.size = unit(0.2, "cm")) +theme(legend.title=element_blank())+
-          theme_bw()+labs(color='Surface Area (cm2)')+theme(legend.position = "none")) 
-
-grid.arrange(p1,p2,p3,nrow = 1)
-
-sim2=sim
-sim2$Qbl = 120
-
-sim_all=rbind(sim1,sim2)
-
-p1=plot(ggplot(sim_all,aes(time/60,C2.S)) +  geom_line(aes(color = as.factor(Qbl))) +ylab("uM") + xlab("Time (h)") +ggtitle("Apical side") + theme(legend.position="bottom")+  theme(legend.key.size = unit(0.2, "cm")) +theme(legend.title=element_blank())+
-          theme_bw()+ scale_y_continuous(limits = c(0, 10.52))+labs(color='Q (uL/min)')+ theme(legend.position=c(0.75, 0.3))) 
-
-p2=plot(ggplot(sim_all,aes(time/60,C3.S)) + geom_line(aes(color = as.factor(Qbl))) +ylab("uM") + xlab("Time (h)") +ggtitle("Basolateral  side")+ theme(legend.position="bottom")+  theme(legend.key.size = unit(0.2, "cm")) +theme(legend.title=element_blank())+
-          theme_bw()+labs(color='Surface Area (cm2)')+theme(legend.position = "none")) 
-
-p3=plot(ggplot(sim_all,aes(time/60,C4.S)) + geom_line(aes(color = as.factor(Qbl))) +ylab("uM") + xlab("Time (h)") +ggtitle("Liver  MPS")+ theme(legend.position="bottom")+  theme(legend.key.size = unit(0.2, "cm")) +theme(legend.title=element_blank())+
-          theme_bw()+labs(color='Surface Area (cm2)')+theme(legend.position = "none")) 
-
-grid.arrange(p1,p2,p3,nrow = 1)
-
-
-
-
-##################                ####################
-##################  Cell density  ####################
-##################                ####################
-
-
+#### Volume sampling without evaporation ###
 
 gut.liver.MM <-  RxODE({         
   N3 = tN3 * exp(eta.N3)
@@ -360,8 +203,8 @@ gut.liver.MM <-  RxODE({
   
   #ter=eta.Q
   
-  V2s = V2s -Vtab
-  V4evs = V4evs+Vtab  
+  V2s = V2s# -Vtab
+  V4evs = V4evs#+Vtab  
   d/dt(Vtab) =   ktab * V2s
   
   #C2MM = A2MM/V2s
@@ -410,16 +253,15 @@ gut.liver.MM <-  RxODE({
 })
 
 # Inizialitzation flow 
-timeQ = 1 # Start flow after x min
-time.inc = 2880 # incubation time in min
-Conc.ini=10 # uM Mofetil
-o.target.AP <- c(30,60,120,480,2880)            #114
-o.target.BS <- c(30,60,120,480,1440,2880)        #293
-o.target.LM <- c(120,240,480,1440,2880)
+time.inc = 2880                                # incubation time in min
+Conc.ini=10                                    # uM Mofetil
+o.target.AP <- c(30,60,120,480,2880)           # sampling times in the apical side (min)
+o.target.BS <- c(30,60,120,480,1440,2880)      # sampling times in the basolateral side (min)
+o.target.LM <- c(120,240,480,1440,2880)        # sampling times in the liver MPS (min)
 Sample.V=25    # sampling volume uL bas and liver
 Sample.Va=c(5,15,30,45)   # sampling volume uL apical
 
-t12tab = 1000000000  # 2880   # t1/2 (first oreder process) in min
+t12tab = 1000000000  # no evaporation in this example and therefore this parameter -> Inf. not necessary for this simulations
 
 
 
@@ -428,33 +270,34 @@ for (i in 1:length(Sample.Va)){
   Sample.Va_i = Sample.Va[i]
   
   # paramters
-  par<- c(tQ=90,                 
-          V2=325, 
-          V3=1506,             
-          V4=1394,
-          PappMPA=546,          # Evaluated from  exp (nm/s)
-          SA23=0.33, 
-          convfactor=0.006,
-          NPERM=2,
-          fum=1,
-          fumMPA=0.38,
-          fumGMPA=0.70,
-          CL3MPA=17,         # Evaluated from  exp (uL/min/Mio cells)
-          CL3MM = 13,         # Parameter from EXP5 all simul. fitting
-          V5=2.6,
-          tN3=0.45,           # From mean of gut-liver data Exp 5
-          tN4=0.30,          # From mean of gut-liver data Exp 5
-          Er=3.0,                # From Cn Bio model MG with input
-          ErG=3.1,
-          PappGMPA=0.35,
-          CL4MPA= 26,
-          Sample.V = Sample.V,
-          Sample.Va_i = Sample.Va[i],
-          tkev = 0,   # From exp 5 (mean of values)
-          Al = 7,
-          Ab = 0,
-          ktab = log(2)/t12tab)
+  par<- c(tQ=90,                # flow rate gut-liver (ul/min)   
+          V2=325,               # volume apical side (uL)
+          V3=1506,              # volume basolateral side (uL)
+          V4=1394,              # volume liver MPS (uL)
+          PappMPA=546,          # Papp MPA (nm/s)
+          SA23=0.33,            # surface area (cm2)
+          convfactor=0.006,     # conv factor Papp
+          NPERM=2,              # perm factor
+          fum=1,                # unbound fraction media MPA and GMPA
+          fumMPA=0.38,          # unbound fraction media MPA
+          fumGMPA=0.70,         # unbound fraction media MPA
+          CL3MPA=17,            # Intestinal CL MPA (uL/min/Mio cells)
+          V5=2.6,               # Volume int. cell (uL/mio cells)
+          tN3=0.45,             # From mean of gut-liver data (mio cells)
+          tN4=0.30,             # From mean of gut-liver data (mio cells)
+          Er=3.0,               # From efflux ratio MPA
+          ErG=3.1,              # From efflux ratio Glu-MPA
+          PappGMPA=0.35,        # Glu-Papp MPA (nm/s)
+          CL4MPA= 26,           # liver CL MPA (uL/min/Mio cells)
+          Sample.V = Sample.V,  # V sample basol. and liver MPS (uL)
+          Sample.Va_i = Sample.Va[i],  # V sample apical
+          tkev = 0,             # constant of evaporation (uL/min)
+          Al = 7,               # Area evaporation in the liver 
+          Ab = 0,               # Area of evaporation in the basoalter sie (if 0 only evaporation in the liver)
+          ktab = log(2)/t12tab) # evporation constant in the apical side,in this example ->0.
           
+  
+  # EV table
   sim.ev.MM <- et(seq(0,tail(o.target.AP,1), by = 1)) %>%
     et(cmt="C2ObsMM", time=0, evid = 1, amt=Conc.ini*unname(par["V2"])) %>%      
     et(cmt="C2ObsMPA", time=0, evid = 1, amt=0)  %>%    
@@ -557,6 +400,7 @@ for (i in 1:length(Sample.Va)){
   
   # Omega and sigma matrix 
   
+  # no BSV
   omega.matrix.mod1.pop <- lotri({
     c(eta.N4 ~ 0.000015^2, eta.N3 ~ 0.000015^2, eta.Q ~ 0.00002^2, eta.kev ~ 0.000015^2) })
   
@@ -617,6 +461,7 @@ grid.arrange(C2,C3,C4,C2M,C3M,C4M,ncol = 3)
 
 
 
+#### Volume sampling with evaporation ###
 
 
 
@@ -637,8 +482,8 @@ gut.liver.MM <-  RxODE({
   
   #ter=eta.Q
   
-  V2s = V2s -Vtab
-  V4evs = V4evs+Vtab  
+  V2s = V2s #-Vtab
+  V4evs = V4evs#+Vtab  
   d/dt(Vtab) =   ktab * V2s
  
   #C2MM = A2MM/V2s
@@ -687,7 +532,6 @@ gut.liver.MM <-  RxODE({
 })
 
 # Inizialitzation flow 
-timeQ = 1 # Start flow after x min
 time.inc = 2880 # incubation time in min
 Conc.ini=10 # uM Mofetil
 o.target.AP <- c(30,60,120,480,2880)            #114
@@ -698,7 +542,7 @@ Sample.Va=c(15)   # sampling volume uL apical
 tkev.a = c(0, 0.01, 0.03, 0.05)
 tkev = c(0, 0.01, 0.03, 0.05)
 
-t12tab = 1000000000  # 2880   # t1/2 (first oreder process) in min
+t12tab = 1000000000  # 2880   # t1/2 (first oreder process) in min 
 
 #Event table                           
 qd <- et(seq(0, 2880, by = 1))
@@ -707,33 +551,32 @@ sim.rep.pop.all = data.frame()
 for (i in 1:length(tkev.a)){
 
   # paramters
-  par<- c(tQ=90,                 
-          V2=325, 
-          V3=1506,             
-          V4=1394,
-          PappMPA=546,          # Evaluated from  exp (nm/s)
-          SA23=0.33, 
-          convfactor=0.006,
-          NPERM=2,
-          fum=1,
-          fumMPA=0.38,
-          fumGMPA=0.70,
-          CL3MPA=17,         # Evaluated from  exp (uL/min/Mio cells)
-          CL3MM = 13,         # Parameter from EXP5 all simul. fitting
-          V5=2.6,
-          tN3=0.45,           # From mean of gut-liver data Exp 5
-          tN4=0.30,          # From mean of gut-liver data Exp 5
-          Er=3.0,                # From Cn Bio model MG with input
-          ErG=3.1,
-          PappGMPA=0.35,
-          CL4MPA= 26,
-          Sample.V = Sample.V,
-          Sample.Va = Sample.Va,
-          kev.a= tkev.a[i],
-          tkev = tkev[i],   # From exp 5 (mean of values)
-          Al = 7,
-          Ab = 0,
-          ktab = log(2)/t12tab)
+  par<- c(tQ=90,          # flow rate gut-liver (ul/min)         
+          V2=325,               # volume apical side (uL)
+          V3=1506,              # volume basolateral side (uL)
+          V4=1394,              # volume liver MPS (uL)
+          PappMPA=546,          # Papp MPA (nm/s)
+          SA23=0.33,            # surface area (cm2)
+          convfactor=0.006,     # conv factor Papp
+          NPERM=2,              # perm factor
+          fum=1,                # unbound fraction media MPA and GMPA
+          fumMPA=0.38,          # unbound fraction media MPA
+          fumGMPA=0.70,         # unbound fraction media MPA
+          CL3MPA=17,            # Intestinal CL MPA (uL/min/Mio cells)
+          V5=2.6,               # Volume int. cell (uL/mio cells)
+          tN3=0.45,             # From mean of gut-liver data (mio cells)
+          tN4=0.30,             # From mean of gut-liver data (mio cells)
+          Er=3.0,               # From efflux ratio MPA
+          ErG=3.1,              # From efflux ratio Glu-MPA
+          PappGMPA=0.35,        # Glu-Papp MPA (nm/s)
+          CL4MPA= 26,           # liver CL MPA (uL/min/Mio cells)
+          Sample.V = Sample.V,  # V sample basol. and liver MPS (uL)
+          Sample.Va = Sample.Va,# V sample apical (uL)
+          kev.a= tkev.a[i],     # constant of evaporation apical (uL/min)
+          tkev = tkev[i],       # constant of evaporation basolateral and liver MPS (uL/min)
+          Al = 7,               # Area of liver involved in the evaporation (only liver media)
+          Ab = 0,               # Area of basol. involved in the evaporation (only liver media)
+          ktab = log(2)/t12tab) # not necessary in this simulation
   
   sim.ev.MM <- et(seq(0,tail(o.target.AP,1), by = 1)) %>%
     et(cmt="C2ObsMM", time=0, evid = 1, amt=Conc.ini*unname(par["V2"])) %>%      
@@ -836,11 +679,12 @@ for (i in 1:length(tkev.a)){
     et(cmt="A4GMPA", time=o.target.BS[6], evid=6, amt=1) 
   
   # Omega and sigma matrix 
-  
+  # no BSV
   omega.matrix.mod1.pop <- lotri({
     c(eta.N4 ~ 0.000015^2, eta.N3 ~ 0.000015^2, eta.Q ~ 0.00002^2, eta.kev ~ 0.000015^2) })
   
   
+  # not necessary for this simulation since the output is not used
   sigma.matrix.mod1.pop <- lotri( CEps.C2.MPA ~ 0.15^2, CEps.C3.MPA ~ 0.15^2, CEps.C4.MPA ~ 0.15^2, 
                                   CEps.C2.GMPA ~ 0.15^2, CEps.C3.GMPA ~ 0.15^2, CEps.C4.GMPA ~ 0.15^2)
   
