@@ -734,17 +734,3 @@ C4M<-ggplot(sim.rep.pop.all,aes(time/60, C4GMPA)) +  geom_line(aes(color=as.fact
 grid.arrange(PV2,Pcell_d,C2,A2)
 
 grid.arrange(C2,C3,C4,C2M,C3M,C4M,ncol = 3)
-
-
-max(sim.rep.pop.all$C2GMPA)
-
-
-##### TEST A SMART WAY TO WRITE EV TABLE ######
-
-prova <- et(seq(0,tail(o.target.AP,1), by = 1))
-  
-for (i in 1:5){
-  prova <- prova %>%
-  et(cmt="C2ObsMM", time=i-1, evid = 1, amt=Conc.ini*unname(par["V2"]),ii=0)      
- 
-}
