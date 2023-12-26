@@ -13,7 +13,7 @@ The analysis is performed using the activity ditribution (pmol/min/Mio cells) fr
   
   Additional analysis were reported for UGT1A1, ST (using 7-hydroxycoumarin), and AO  
   
-  The analysis needs the input dataset structure reported in the input file from https://bioivt.com/inventory?facets=%28productType%3A%22Cell+Products%22%29&facets=%28species.lvl0%3A%22Human%22%29&facets=%28matrix%3A%22Hepatocyte+-+Cryoplateable%22%29&string=Cryoplateable (after login). In the input file provided as csv, the column have to provide the name of the probe substrate as reported in the XXX varaible. 
+  The analysis needs the input dataset structure reported in the input file from https://bioivt.com/inventory?facets=%28productType%3A%22Cell+Products%22%29&facets=%28species.lvl0%3A%22Human%22%29&facets=%28matrix%3A%22Hepatocyte+-+Cryoplateable%22%29&string=Cryoplateable (after login). The user needs to provide an input file  as csv with the column names of the probe substrate as reported in setnames (line 36). 
   The script automatically returns for each isoform:
    * The number of male and female donors investigate for the given isoform
    * The median, mean, SD, the p value for the Shapiro normality assessment, the Barlett's test outcome (homogeneity of the variance between male and female), and the Hartigian's test to evaluate the unimodal distribution
