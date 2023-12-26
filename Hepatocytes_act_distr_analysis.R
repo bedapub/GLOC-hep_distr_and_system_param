@@ -32,7 +32,7 @@ stat_analysis = function(df){
     uniqv[which.max(tabulate(match(v, uniqv)))]
   }
   
-  
+  # Provide the name of the columns and in new the name of the respective enzyme
   setnames (df, skip_absent=TRUE, old= c("X7.HCS", "COUM", "BUP",    "AMO",  "TOLB",   "MEPH",   "DEX",   "CZX",    "TEST",    "MID",  "Description"), 
             new= c( "ST","CYP2A6","CYP2B6","CYP2C8","CYP2C9","CYP2C19","CYP2D6", "CYP2E1", "CYP3A4", "CYP3A4.5", "Sex"))
   enzyme <- c("ST","CYP2A6","CYP2B6","CYP2C8","CYP2C9","CYP2C19","CYP2D6", "CYP2E1", "CYP3A4", "CYP3A4.5","AO","UGT1A1")
